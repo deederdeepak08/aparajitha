@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CPC PCS Enterprise Dashboard - North & East Operations</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for professional icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for direct Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Google Inter Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 antialiased h-screen flex overflow-hidden">
+
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="w-80 bg-slate-900 border-r border-slate-800 flex flex-col z-20 transition-all duration-300">
+        <!-- Brand Header -->
+        <div class="p-5 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <i class="fa-solid fa-chart-pie text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-slate-100 tracking-tight text-base">CPC PCS Analytics</h1>
+                    <p class="text-xs text-slate-400">North & East Operations</p>
+                </div>
+            </div>
+            <button id="sidebar-toggle" class="md:hidden text-slate-400 hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <!-- File Upload Widget for Excel -->
+        <div class="p-4 border-b border-slate-800 bg-slate-950/40">
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Load Excel Dataset (.xlsx)</label>
+            <label class="flex flex-col items-center justify-center w-full h-16 border-2 border-slate-700 border-dashed rounded-lg cursor-pointer bg-slate-900 hover:bg-slate-800/80 transition-colors">
+                <div class="flex items-center space-x-2 text-xs text-slate-300 px-3">
+                    <i class="fa-solid fa-cloud-arrow-up text-blue-400 text-base"></i>
+                    <span class="truncate" id="file-upload-label">Upload Excel file here</span>
+                </div>
+                <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="hidden" onchange="handleExcelUpload(event)">
+            </label>
+        </div>
+
+        <!-- Navigation Search & Filters -->
+        <div class="p-4 border-b border-slate-800/60 space-y-3">
+            <div class="relative">
+                <i class="fa-solid fa-search absolute left-3 top-3 text-slate-500 text-xs"></i>
+                <input type="text" id="group-search" placeholder="Search groups or services..." class="w-full bg-slate-950/80 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
+            </div>
+            <div class="flex gap-2">
+                <button onclick="filterRegion('ALL')" id="btn-region-all" class="flex-1 py-1.5 px-2 bg-blue-600 text-white rounded-md text-xs font-medium transition-colors">All</button>
+                <button onclick="filterRegion('NORTH')" id="btn-region-north" class="flex-1 py-1.5 px-2 bg-slate-800 text-slate-400 hover:text-slate-200 rounded-md text-xs font-medium transition-colors">North</button>
+                <button onclick="filterRegion('EAST')" id="btn-region-east" class="flex-1 py-1.5 px-2 bg-slate-800 text-slate-400 hover:text-slate-200 rounded-md text-xs font-medium transition-colors">East</button>
+            </div>
+        </div>
+
+        <!-- Group List Container -->
+        <div class="flex-1 overflow-y-auto p-3 space-y-1" id="group-list-container">
+            <!-- Dynamically populated group items -->
+        </div>
+
+        <!-- Sidebar Footer Status -->
+        <div class="p-4 border-t border-slate-800 bg-slate-900/50 flex items-center justify-between text-xs text-slate-400">
+            <span class="flex items-center gap-1.5">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Active Records
+            </span>
+            <span class="font-mono text-slate-300" id="record-count-stat">0</span>
+        </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-950">
+        
+        <!-- Top Navigation Header -->
+        <header class="h-16 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 px-6 flex items-center justify-between z-10">
+            <div class="flex items-center space-x-4">
+                <button id="mobile-menu-btn" class="text-slate-400 hover:text-white md:hidden">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <div>
+                    <h2 id="header-title" class="text-lg font-bold text-slate-100 flex items-center gap-2">
+                        <span>Executive Overview</span>
+                        <span class="text-xs font-normal px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20" id="header-badge">All Data</span>
+                    </h2>
+                    <p class="text-xs text-slate-400" id="header-subtitle">Comprehensive corporate performance & service telemetry</p>
+                </div>
+            </div>
+
+            <!-- Global Actions -->
+            <div class="flex items-center space-x-3">
+                <div class="relative hidden sm:block">
+                    <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-500 text-xs"></i>
+                    <input type="text" id="global-search" placeholder="Search across all fields..." class="w-64 bg-slate-950 border border-slate-800 rounded-lg pl-9 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors">
+                </div>
+                <button onclick="exportCurrentView()" title="Export CSV" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 border border-slate-700 transition-colors">
+                    <i class="fa-solid fa-download text-blue-400"></i> <span class="hidden sm:inline">Export CSV</span>
+                </button>
+                <button onclick="window.print()" title="Print Dashboard" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2 rounded-lg text-xs font-medium flex items-center gap-2 border border-slate-700 transition-colors">
+                    <i class="fa-solid fa-print text-indigo-400"></i> <span class="hidden sm:inline">Print</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Workspace Viewport -->
+        <main class="flex-1 overflow-y-auto p-6 space-y-6" id="workspace-container">
+            
+            <!-- Key Metric Summary Cards -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 flex items-center justify-between shadow-sm">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Total Entries</p>
+                        <h3 class="text-2xl font-bold text-slate-100 mt-1" id="stat-total-entries">0</h3>
+                        <p class="text-xs text-emerald-400 mt-1 flex items-center gap-1"><i class="fa-solid fa-arrow-up"></i> Verified Dataset</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 text-lg">
+                        <i class="fa-solid fa-database"></i>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 flex items-center justify-between shadow-sm">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Active Groups</p>
+                        <h3 class="text-2xl font-bold text-slate-100 mt-1" id="stat-total-groups">0</h3>
+                        <p class="text-xs text-blue-400 mt-1 flex items-center gap-1"><i class="fa-solid fa-layer-group"></i> Categorized Units</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 text-lg">
+                        <i class="fa-solid fa-sitemap"></i>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 flex items-center justify-between shadow-sm">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Unique Services</p>
+                        <h3 class="text-2xl font-bold text-slate-100 mt-1" id="stat-total-services">0</h3>
+                        <p class="text-xs text-purple-400 mt-1 flex items-center gap-1"><i class="fa-solid fa-toolbox"></i> Service Offerings</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400 text-lg">
+                        <i class="fa-solid fa-server"></i>
+                    </div>
+                </div>
+
+                <div class="bg-slate-900 border border-slate-800/80 rounded-2xl p-5 flex items-center justify-between shadow-sm">
+                    <div>
+                        <p class="text-xs font-medium text-slate-400 uppercase tracking-wider">Unique Personnel</p>
+                        <h3 class="text-2xl font-bold text-slate-100 mt-1" id="stat-total-names">0</h3>
+                        <p class="text-xs text-amber-400 mt-1 flex items-center gap-1"><i class="fa-solid fa-users"></i> Assigned Owners</p>
+                    </div>
+                    <div class="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400 text-lg">
+                        <i class="fa-solid fa-id-badge"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Main Content Display Section -->
+            <div id="dynamic-content-area" class="space-y-6">
+                <!-- Default overview or group table rendered here -->
+            </div>
+        </main>
+    </div>
+
+    <!-- Record Details Modal -->
+    <div id="detail-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
+            <div class="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-900/90">
+                <div class="flex items-center space-x-3">
+                    <div class="w-9 h-9 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                        <i class="fa-solid fa-file-lines"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-slate-100 text-base" id="modal-title">Record Details</h3>
+                        <p class="text-xs text-slate-400">Full parameter inspection</p>
+                    </div>
+                </div>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-4 flex-1" id="modal-body-content">
+                <!-- Modal items populated dynamically -->
+            </div>
+            <div class="p-4 border-t border-slate-800 bg-slate-950/50 flex justify-end">
+                <button onclick="closeModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-2 rounded-lg text-xs font-medium transition-colors">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application JavaScript Engine & Dataset Handling -->
+    <script>
+        // Expanded Default Dataset (Includes North & East Operations)
+        let rawDataset = [
+            { id: 1, region: "NORTH", group: "North - Group Alpha", service: "Network Infrastructure & WAN", name: "Rajesh Kumar", status: "Active", location: "Delhi HQ", priority: "High", contact: "+91 98112 34567", email: "rajesh.kumar@cpcpcs.com", remarks: "Primary node supervisor for Delhi-NCR zone." },
+            { id: 2, region: "NORTH", group: "North - Group Alpha", service: "Hardware AMC & Repairs", name: "Amit Sharma", status: "Active", location: "Noida Sector 62", priority: "Medium", contact: "+91 98711 22334", email: "amit.sharma@cpcpcs.com", remarks: "Handles printer and server maintenance schedules." },
+            { id: 3, region: "NORTH", group: "North - Group Alpha", service: "Software Deployment", name: "Priya Singh", status: "In Progress", location: "Gurugram Cyber City", priority: "High", contact: "+91 99100 88776", email: "priya.singh@cpcpcs.com", remarks: "Enterprise ERP rollout coordinator." },
+            { id: 4, region: "NORTH", group: "North - Group Beta", service: "Cybersecurity & Firewall", name: "Vikram Malhotra", status: "Active", location: "Chandigarh Hub", priority: "Critical", contact: "+91 94170 11223", email: "vikram.m@cpcpcs.com", remarks: "Performs quarterly vulnerability assessments." },
+            { id: 5, region: "NORTH", group: "North - Group Beta", service: "Cloud Migration Services", name: "Neha Gupta", status: "Active", location: "Delhi HQ", priority: "High", contact: "+91 98109 44556", email: "neha.gupta@cpcpcs.com", remarks: "AWS / Azure hybrid architecture lead." },
+            { id: 6, region: "NORTH", group: "North - Group Beta", service: "Database Administration", name: "Sandeep Verma", status: "Active", location: "Jaipur Branch", priority: "Medium", contact: "+91 94140 55667", email: "sandeep.v@cpcpcs.com", remarks: "Oracle and PostgreSQL cluster supervisor." },
+            { id: 7, region: "NORTH", group: "North - Group Gamma", service: "Power Backup & UPS", name: "Manoj Tiwari", status: "Active", location: "Lucknow Unit", priority: "High", contact: "+91 94150 77889", email: "manoj.tiwari@cpcpcs.com", remarks: "Substation diesel generator & UPS upkeep." },
+            { id: 8, region: "NORTH", group: "North - Group Gamma", service: "CCTV & Surveillance", name: "Alok Rastogi", status: "Pending", location: "Kanpur Depot", priority: "Low", contact: "+91 93361 12345", email: "alok.r@cpcpcs.com", remarks: "IP camera network maintenance pending review." },
+            { id: 9, region: "NORTH", group: "North - Group Delta", service: "Enterprise Telephony & VoIP", name: "Ritu Saxena", status: "Active", location: "Delhi HQ", priority: "Medium", contact: "+91 98188 33221", email: "ritu.saxena@cpcpcs.com", remarks: "PBX and cloud calling integration manager." },
+            { id: 10, region: "NORTH", group: "North - Group Delta", service: "Asset Management", name: "Deepak Joshi", status: "Active", location: "Dehradun Office", priority: "Low", contact: "+91 94120 99887", email: "deepak.j@cpcpcs.com", remarks: "Inventory audit and hardware tagging." },
+            { id: 11, region: "EAST", group: "East - Group Alpha", service: "Power Systems Management", name: "Subhashis Roy", status: "Active", location: "Kolkata HQ", priority: "Critical", contact: "+91 98300 12345", email: "subhashis.roy@cpcpcs.com", remarks: "Grid telemetry and high-tension monitoring." },
+            { id: 12, region: "EAST", group: "East - Group Alpha", service: "SCADA & Telemetry Control", name: "Ananya Mukherjee", status: "Active", location: "Howrah Plant", priority: "High", contact: "+91 98311 67890", email: "ananya.m@cpcpcs.com", remarks: "Industrial automation software lead." },
+            { id: 13, region: "EAST", group: "East - Group Alpha", service: "Fiber Optic Backbone", name: "Debabrata Sen", status: "Active", location: "Durgapur Hub", priority: "High", contact: "+91 94340 22334", email: "debabrata.sen@cpcpcs.com", remarks: "Long-haul fiber link maintenance." },
+            { id: 14, region: "EAST", group: "East - Group Beta", service: "Logistics & Dispatch IT", name: "Manish Das", status: "Pending", location: "Patna Depot", priority: "Medium", contact: "+91 99340 55443", email: "manish.das@cpcpcs.com", remarks: "Fleet tracking terminal installation." },
+            { id: 15, region: "EAST", group: "East - Group Beta", service: "Quality Assurance & Testing", name: "Puja Banerjee", status: "Active", location: "Kolkata HQ", priority: "High", contact: "+91 98302 99112", email: "puja.banerjee@cpcpcs.com", remarks: "Software QA and compliance audit." },
+            { id: 16, region: "EAST", group: "East - Group Beta", service: "Environmental Monitoring", name: "Sayan Chattopadhyay", status: "Active", location: "Bhubaneswar Unit", priority: "Medium", contact: "+91 94370 88990", email: "sayan.c@cpcpcs.com", remarks: "IoT sensor telemetry for industrial emissions." },
+            { id: 17, region: "EAST", group: "East - Group Gamma", service: "Customer Support Desk", name: "Swati Bose", status: "Active", location: "Guwahati Office", priority: "High", contact: "+91 98640 33445", email: "swati.bose@cpcpcs.com", remarks: "Northeast regional helpdesk supervisor." },
+            { id: 18, region: "EAST", group: "East - Group Gamma", service: "Field Engineering Services", name: "Tapan Kumar Das", status: "In Progress", location: "Ranchi Branch", priority: "Medium", contact: "+91 94311 77665", email: "tapan.das@cpcpcs.com", remarks: "On-site troubleshooting & equipment swaps." },
+            { id: 19, region: "EAST", group: "East - Group Delta", service: "Server Virtualization", name: "Arindam Chatterjee", status: "Active", location: "Kolkata HQ", priority: "Critical", contact: "+91 98309 44332", email: "arindam.c@cpcpcs.com", remarks: "VMware cluster administration and DR setup." },
+            { id: 20, region: "EAST", group: "East - Group Delta", service: "Network Security Operations", name: "Poulami Ghosh", status: "Active", location: "Jamshedpur Facility", priority: "High", contact: "+91 94313 11223", email: "poulami.ghosh@cpcpcs.com", remarks: "SOC level-2 incident responder." }
+        ];
+
+        // Application State
+        let currentRegionFilter = 'ALL';
+        let selectedGroupFilter = null;
+        let searchQuery = '';
+        let globalSearchQuery = '';
+
+        // DOM Elements
+        const groupListContainer = document.getElementById('group-list-container');
+        const dynamicContentArea = document.getElementById('dynamic-content-area');
+        const headerTitle = document.getElementById('header-title');
+        const headerBadge = document.getElementById('header-badge');
+        const headerSubtitle = document.getElementById('header-subtitle');
+        const recordCountStat = document.getElementById('record-count-stat');
+        
+        const statTotalEntries = document.getElementById('stat-total-entries');
+        const statTotalGroups = document.getElementById('stat-total-groups');
+        const statTotalServices = document.getElementById('stat-total-services');
+        const statTotalNames = document.getElementById('stat-total-names');
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDashboardMetrics();
+            renderGroupSidebar();
+            renderMainWorkspace();
+
+            document.getElementById('group-search').addEventListener('input', (e) => {
+                searchQuery = e.target.value.toLowerCase();
+                renderGroupSidebar();
+            });
+
+            document.getElementById('global-search').addEventListener('input', (e) => {
+                globalSearchQuery = e.target.value.toLowerCase();
+                selectedGroupFilter = null;
+                renderMainWorkspace();
+            });
+
+            document.getElementById('mobile-menu-btn').addEventListener('click', () => {
+                document.getElementById('sidebar').classList.toggle('-translate-x-full');
+            });
+        });
+
+        // Handle Excel File Upload & Parse
+        function handleExcelUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('file-upload-label').textContent = file.name;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    
+                    // Grab the first sheet
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    // Convert to JSON
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    
+                    if (jsonData && jsonData.length > 0) {
+                        // Map parsed excel rows to standard dataset structure safely
+                        rawDataset = jsonData.map((row, index) => {
+                            // Normalize keys case-insensitively
+                            const keys = Object.keys(row);
+                            const findVal = (terms) => {
+                                const foundKey = keys.find(k => terms.some(t => k.toLowerCase().includes(t)));
+                                return foundKey ? row[foundKey] : null;
+                            };
+
+                            return {
+                                id: index + 1,
+                                region: String(findVal(['region', 'zone']) || (index % 2 === 0 ? 'NORTH' : 'EAST')).toUpperCase(),
+                                group: String(findVal(['group', 'unit', 'department', 'category']) || 'Operations Group'),
+                                service: String(findVal(['service', 'offering', 'task', 'description']) || 'General Service'),
+                                name: String(findVal(['name', 'person', 'owner', 'assigned', 'employee']) || 'Assigned Staff'),
+                                status: String(findVal(['status', 'state']) || 'Active'),
+                                location: String(findVal(['location', 'site', 'branch', 'city']) || 'Headquarters'),
+                                priority: String(findVal(['priority', 'severity']) || 'Medium'),
+                                contact: String(findVal(['contact', 'phone', 'mobile']) || '+91 98000 00000'),
+                                email: String(findVal(['email', 'mail']) || 'staff@cpcpcs.com'),
+                                remarks: String(findVal(['remark', 'note', 'comment']) || 'Loaded from Excel record.')
+                            };
+                        });
+
+                        selectedGroupFilter = null;
+                        updateDashboardMetrics();
+                        renderGroupSidebar();
+                        renderMainWorkspace();
+                    }
+                } catch (err) {
+                    alert("Error parsing Excel file. Please ensure it is a valid spreadsheet.");
+                    console.error(err);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function filterRegion(region) {
+            currentRegionFilter = region;
+            selectedGroupFilter = null;
+            
+            ['all', 'north', 'east'].forEach(r => {
+                const btn = document.getElementById(`btn-region-${r}`);
+                if (btn) {
+                    btn.className = `flex-1 py-1.5 px-2 rounded-md text-xs font-medium transition-colors ${r === region.toLowerCase() ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`;
+                }
+            });
+
+            renderGroupSidebar();
+            renderMainWorkspace();
+        }
+
+        function getFilteredDataset() {
+            return rawDataset.filter(item => {
+                const matchesRegion = currentRegionFilter === 'ALL' || item.region.toUpperCase() === currentRegionFilter;
+                const matchesGroup = !selectedGroupFilter || item.group === selectedGroupFilter;
+                
+                const matchesGlobalSearch = !globalSearchQuery || 
+                    item.group.toLowerCase().includes(globalSearchQuery) ||
+                    item.service.toLowerCase().includes(globalSearchQuery) ||
+                    item.name.toLowerCase().includes(globalSearchQuery) ||
+                    item.location.toLowerCase().includes(globalSearchQuery) ||
+                    item.region.toLowerCase().includes(globalSearchQuery);
+
+                return matchesRegion && matchesGroup && matchesGlobalSearch;
+            });
+        }
+
+        function updateDashboardMetrics() {
+            statTotalEntries.textContent = rawDataset.length;
+            statTotalGroups.textContent = new Set(rawDataset.map(i => i.group)).size;
+            statTotalServices.textContent = new Set(rawDataset.map(i => i.service)).size;
+            statTotalNames.textContent = new Set(rawDataset.map(i => i.name)).size;
+            recordCountStat.textContent = rawDataset.length;
+        }
+
+        function renderGroupSidebar() {
+            groupListContainer.innerHTML = '';
+            
+            const filteredByRegion = rawDataset.filter(i => currentRegionFilter === 'ALL' || i.region.toUpperCase() === currentRegionFilter);
+            const groupsMap = {};
+            
+            filteredByRegion.forEach(item => {
+                const grp = item.group || 'Unassigned';
+                if (!groupsMap[grp]) {
+                    groupsMap[grp] = { count: 0, region: item.region };
+                }
+                groupsMap[grp].count++;
+            });
+
+            const matchingGroups = Object.keys(groupsMap).filter(g => g.toLowerCase().includes(searchQuery));
+
+            if (matchingGroups.length === 0) {
+                groupListContainer.innerHTML = `<div class="p-4 text-center text-xs text-slate-500">No groups found</div>`;
+                return;
+            }
+
+            const allBtn = document.createElement('button');
+            allBtn.className = `w-full text-left px-3 py-2.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between ${selectedGroupFilter === null ? 'bg-blue-600/20 text-blue-400 border border-blue-500/30' : 'text-slate-300 hover:bg-slate-800/60'}`;
+            allBtn.innerHTML = `
+                <span class="flex items-center gap-2"><i class="fa-solid fa-border-all text-slate-400"></i> All Groups Overview</span>
+                <span class="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-400">${filteredByRegion.length}</span>
+            `;
+            allBtn.onclick = () => {
+                selectedGroupFilter = null;
+                renderGroupSidebar();
+                renderMainWorkspace();
+            };
+            groupListContainer.appendChild(allBtn);
+
+            matchingGroups.forEach(groupName => {
+                const info = groupsMap[groupName];
+                const isSelected = selectedGroupFilter === groupName;
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left px-3 py-2.5 rounded-lg text-xs font-medium transition-all flex items-center justify-between group ${isSelected ? 'bg-blue-600 text-white shadow-md shadow-blue-600/20' : 'text-slate-300 hover:bg-slate-800/60'}`;
+                
+                btn.innerHTML = `
+                    <div class="flex items-center gap-2.5 truncate">
+                        <i class="fa-solid fa-folder ${isSelected ? 'text-white' : 'text-blue-400'}"></i>
+                        <span class="truncate">${groupName}</span>
+                    </div>
+                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                        <span class="text-[10px] px-1.5 py-0.5 rounded ${isSelected ? 'bg-blue-700 text-white' : 'bg-slate-800 text-slate-400'}">${info.count}</span>
+                    </div>
+                `;
+
+                btn.onclick = () => {
+                    selectedGroupFilter = groupName;
+                    renderGroupSidebar();
+                    renderMainWorkspace();
+                };
+
+                groupListContainer.appendChild(btn);
+            });
+        }
+
+        function renderMainWorkspace() {
+            updateDashboardMetrics();
+            const dataset = getFilteredDataset();
+
+            if (selectedGroupFilter) {
+                headerTitle.innerHTML = `<span>${selectedGroupFilter}</span>`;
+                headerBadge.textContent = `${dataset.length} records`;
+                headerSubtitle.textContent = `Detailed service breakdown & assigned personnel for this group`;
+            } else if (globalSearchQuery) {
+                headerTitle.innerHTML = `<span>Global Search Results</span>`;
+                headerBadge.textContent = `${dataset.length} matches`;
+                headerSubtitle.textContent = `Query: "${globalSearchQuery}"`;
+            } else {
+                headerTitle.innerHTML = `<span>Executive Overview</span>`;
+                headerBadge.textContent = currentRegionFilter === 'ALL' ? 'All Regions' : `${currentRegionFilter} Region`;
+                headerSubtitle.textContent = `Comprehensive corporate performance & service telemetry`;
+            }
+
+            if (dataset.length === 0) {
+                dynamicContentArea.innerHTML = `
+                    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-16 text-center space-y-3">
+                        <div class="w-16 h-16 rounded-2xl bg-slate-800 flex items-center justify-center mx-auto text-slate-500 text-2xl">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </div>
+                        <h3 class="text-base font-bold text-slate-200">No records found</h3>
+                        <p class="text-xs text-slate-400 max-w-sm mx-auto">Try adjusting your search filters or select a different group from the left sidebar.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl shadow-xl overflow-hidden">
+                    <div class="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/50">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                            <h3 class="font-bold text-slate-100 text-sm">Enterprise Records Telemetry</h3>
+                        </div>
+                        <span class="text-xs text-slate-400 font-mono">Showing ${dataset.length} entries</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-950/60 text-slate-400 font-semibold border-b border-slate-800">
+                                    <th class="p-3.5 pl-5">Region / Group</th>
+                                    <th class="p-3.5">Service Offering</th>
+                                    <th class="p-3.5">Assigned Name</th>
+                                    <th class="p-3.5">Location</th>
+                                    <th class="p-3.5">Status</th>
+                                    <th class="p-3.5">Priority</th>
+                                    <th class="p-3.5 pr-5 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-800/60">
+            `;
+
+            dataset.forEach(item => {
+                const statusBadge = item.status === 'Active' 
+                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                    : item.status === 'In Progress' 
+                    ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' 
+                    : 'bg-amber-500/10 text-amber-400 border border-amber-500/20';
+
+                const priorityBadge = item.priority === 'Critical'
+                    ? 'text-rose-400 bg-rose-500/10 border border-rose-500/20'
+                    : item.priority === 'High'
+                    ? 'text-orange-400 bg-orange-500/10 border border-orange-500/20'
+                    : 'text-slate-400 bg-slate-800 border border-slate-700';
+
+                html += `
+                    <tr class="hover:bg-slate-800/40 transition-colors group">
+                        <td class="p-3.5 pl-5">
+                            <div class="font-semibold text-slate-200">${item.group}</div>
+                            <div class="text-[10px] text-slate-400 uppercase tracking-wider">${item.region} REGION</div>
+                        </td>
+                        <td class="p-3.5 font-medium text-slate-300">${item.service}</td>
+                        <td class="p-3.5">
+                            <div class="text-slate-200 font-medium">${item.name}</div>
+                            <div class="text-[10px] text-slate-400 font-mono">${item.contact}</div>
+                        </td>
+                        <td class="p-3.5 text-slate-300"><i class="fa-solid fa-location-dot text-slate-500 mr-1.5"></i>${item.location}</td>
+                        <td class="p-3.5">
+                            <span class="px-2.5 py-1 rounded-full text-[10px] font-medium inline-block ${statusBadge}">${item.status}</span>
+                        </td>
+                        <td class="p-3.5">
+                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold inline-block ${priorityBadge}">${item.priority}</span>
+                        </td>
+                        <td class="p-3.5 pr-5 text-right">
+                            <button onclick="openRecordModal(${item.id})" class="px-3 py-1.5 bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-300 rounded-lg text-xs font-medium transition-all shadow-sm flex items-center gap-1.5 ml-auto">
+                                <i class="fa-solid fa-eye"></i> Details
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            html += `
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+
+            dynamicContentArea.innerHTML = html;
+        }
+
+        function openRecordModal(id) {
+            const item = rawDataset.find(i => i.id === id);
+            if (!item) return;
+
+            document.getElementById('modal-title').textContent = `${item.service} — ${item.group}`;
+            
+            const modalContent = document.getElementById('modal-body-content');
+            modalContent.innerHTML = `
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Region & Group</span>
+                        <p class="text-sm font-bold text-slate-200 mt-1">${item.region} Region / ${item.group}</p>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Service Offering</span>
+                        <p class="text-sm font-bold text-slate-200 mt-1">${item.service}</p>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Assigned Personnel</span>
+                        <p class="text-sm font-bold text-slate-200 mt-1">${item.name}</p>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Contact Number</span>
+                        <p class="text-sm font-bold text-slate-200 mt-1 font-mono">${item.contact}</p>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Email Address</span>
+                        <p class="text-sm font-bold text-slate-200 mt-1">${item.email}</p>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Location / Site</span>
+                        <p class="text-sm font-bold text-slate-200 mt-1">${item.location}</p>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Status & Priority</span>
+                        <div class="flex gap-2 mt-1">
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">${item.status}</span>
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold bg-rose-500/10 text-rose-400 border border-rose-500/20">${item.priority}</span>
+                        </div>
+                    </div>
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 sm:col-span-2">
+                        <span class="text-[10px] text-slate-400 uppercase font-semibold">Operational Remarks & Notes</span>
+                        <p class="text-xs text-slate-300 mt-1 leading-relaxed">${item.remarks}</p>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+
+        function exportCurrentView() {
+            const data = getFilteredDataset();
+            if (data.length === 0) return;
+
+            const headers = ["ID", "Region", "Group", "Service", "Name", "Location", "Status", "Priority", "Contact", "Email", "Remarks"];
+            let csvContent = headers.join(",") + "\n";
+
+            data.forEach(item => {
+                const row = [
+                    item.id,
+                    `"${item.region}"`,
+                    `"${item.group}"`,
+                    `"${item.service}"`,
+                    `"${item.name}"`,
+                    `"${item.location}"`,
+                    `"${item.status}"`,
+                    `"${item.priority}"`,
+                    `"${item.contact}"`,
+                    `"${item.email}"`,
+                    `"${item.remarks}"`
+                ];
+                csvContent += row.join(",") + "\n";
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `CPC_PCS_Dashboard_Export_${currentRegionFilter}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
