@@ -484,6 +484,89 @@ button:disabled {
     box-shadow: 0 10px 35px rgba(18,35,70,0.06);
 }
 
+.stat-card-head {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.stat-info-btn {
+    width:27px;
+    height:27px;
+    border-radius:50%;
+    border:1px solid #d8c8ee;
+    background:#faf7ff;
+    color:#6d28d9;
+    font-weight:900;
+    font-size:13px;
+    cursor:pointer;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    transition:transform .18s ease, background .18s ease, box-shadow .18s ease;
+}
+.stat-info-btn:hover {
+    transform:translateY(-1px) scale(1.04);
+    background:#f1e9ff;
+    box-shadow:0 7px 18px rgba(109,40,217,.14);
+}
+.stat-info-btn:active { transform:scale(.96); }
+
+.stat-hint {
+    margin-top:5px;
+    color:var(--muted);
+    font-size:10px;
+}
+
+.stat-breakdown-grid {
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;
+}
+.stat-breakdown-card {
+    border:1px solid #e8def3;
+    border-radius:14px;
+    padding:14px;
+    background:linear-gradient(135deg,#fff,#fbf8ff);
+}
+.stat-breakdown-title {
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-bottom:10px;
+}
+.stat-breakdown-title strong { font-size:14px; }
+.stat-breakdown-title span { color:var(--muted); font-size:10px; }
+.stat-breakdown-list { display:grid; gap:6px; }
+.stat-breakdown-row {
+    display:grid;
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:10px;
+    padding:8px 9px;
+    border-radius:9px;
+    background:#faf8fd;
+}
+.stat-breakdown-row span {
+    font-size:11px;
+    overflow-wrap:anywhere;
+}
+.stat-breakdown-row strong { font-size:11px; }
+.stat-breakdown-total {
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px dashed #ddd0eb;
+    display:flex;
+    justify-content:space-between;
+    font-size:11px;
+    font-weight:800;
+}
+
+@media (max-width:760px) {
+    .stat-breakdown-grid { grid-template-columns:1fr; }
+}
+
 .stat-label {
     color: var(--muted);
     font-size: 11px;
@@ -1646,6 +1729,76 @@ select:focus {
 }
 
 /* ================================================================
+   POST-LOGIN GREETING
+   ================================================================ */
+.post-login-welcome {
+    position:fixed;
+    inset:0;
+    z-index:100001;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:
+        radial-gradient(circle at 20% 20%, rgba(124,58,237,.18), transparent 32%),
+        radial-gradient(circle at 80% 75%, rgba(37,99,235,.14), transparent 34%),
+        rgba(248,250,252,.92);
+    backdrop-filter:blur(12px);
+    -webkit-backdrop-filter:blur(12px);
+    opacity:1;
+    transition:opacity .45s ease, visibility .45s ease;
+}
+.post-login-welcome.hidden {
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+}
+.post-login-card {
+    width:min(470px,100%);
+    text-align:center;
+    padding:42px 30px;
+    border-radius:30px;
+    border:1px solid rgba(124,58,237,.15);
+    background:rgba(255,255,255,.92);
+    box-shadow:0 30px 90px rgba(48,25,91,.18);
+    animation:postLoginIn .55s cubic-bezier(.2,.8,.2,1) both;
+}
+@keyframes postLoginIn {
+    from { opacity:0; transform:translateY(22px) scale(.96); }
+    to { opacity:1; transform:translateY(0) scale(1); }
+}
+.post-login-orb {
+    width:58px;
+    height:58px;
+    margin:0 auto 16px;
+    border-radius:18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:#fff;
+    font-size:24px;
+    background:linear-gradient(145deg,#7c3aed,#4f46e5);
+    box-shadow:0 15px 32px rgba(79,70,229,.25);
+}
+.post-login-greeting {
+    font-size:29px;
+    font-weight:900;
+    letter-spacing:-.03em;
+    color:#211735;
+}
+.post-login-name {
+    margin-top:6px;
+    font-size:18px;
+    font-weight:750;
+    color:#514665;
+}
+.post-login-time {
+    margin-top:10px;
+    color:#7a6e88;
+    font-size:12px;
+}
+
+/* ================================================================
    LOGIN GATE
    ================================================================ */
 body.auth-locked > *:not(#welcomeSplash):not(#loginGate) {
@@ -1892,6 +2045,16 @@ body.auth-locked > *:not(#welcomeSplash):not(#loginGate) {
     </section>
 </div>
 
+<!-- Post-login greeting -->
+<div id="postLoginWelcome" class="post-login-welcome hidden" aria-hidden="true">
+    <div class="post-login-card">
+        <div class="post-login-orb">✦</div>
+        <div id="postLoginGreeting" class="post-login-greeting">Good evening</div>
+        <div id="postLoginName" class="post-login-name">Welcome, Hariharan</div>
+        <div id="postLoginTime" class="post-login-time"></div>
+    </div>
+</div>
+
 <div class="app-shell">
 
     <div id="uploadInterface">
@@ -2016,20 +2179,36 @@ body.auth-locked > *:not(#welcomeSplash):not(#loginGate) {
 
     <section id="statsSection" class="stats hidden">
         <div class="stat-card">
-            <div class="stat-label">Group</div>
+            <div class="stat-card-head">
+                <div class="stat-label">Group</div>
+                <button class="stat-info-btn" type="button" data-stat-info="group" aria-label="Group breakdown" title="View Group breakdown">i</button>
+            </div>
             <div id="groupRecords" class="stat-value">0</div>
+            <div class="stat-hint">Unique groups</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Entities</div>
+            <div class="stat-card-head">
+                <div class="stat-label">Entities</div>
+                <button class="stat-info-btn" type="button" data-stat-info="entity" aria-label="Entity breakdown" title="View Entity breakdown">i</button>
+            </div>
             <div id="entityRecords" class="stat-value">0</div>
+            <div class="stat-hint">Unique entities</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Services</div>
+            <div class="stat-card-head">
+                <div class="stat-label">Services</div>
+                <button class="stat-info-btn" type="button" data-stat-info="service" aria-label="Service breakdown" title="View Service breakdown">i</button>
+            </div>
             <div id="serviceRecords" class="stat-value">0</div>
+            <div class="stat-hint">Unique services</div>
         </div>
         <div class="stat-card">
-            <div class="stat-label">Total Commercials</div>
+            <div class="stat-card-head">
+                <div class="stat-label">Total Commercials</div>
+                <button class="stat-info-btn" type="button" data-stat-info="commercial" aria-label="Commercial breakdown" title="View Commercial breakdown">i</button>
+            </div>
             <div id="totalCommercials" class="stat-value">₹0</div>
+            <div class="stat-hint">Across all groups</div>
         </div>
     </section>
 
@@ -2227,6 +2406,20 @@ body.auth-locked > *:not(#welcomeSplash):not(#loginGate) {
     </div>
 </div>
 
+
+<div id="statsInfoModal" class="modal-backdrop" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="statsInfoTitle">
+        <div class="modal-header">
+            <div>
+                <div class="results-kicker">SUMMARY BREAKDOWN</div>
+                <h3 id="statsInfoTitle">Summary Details</h3>
+                <p id="statsInfoSubtitle">Breakdown of the uploaded workbook.</p>
+            </div>
+            <button id="statsInfoClose" class="close-btn" type="button" aria-label="Close">×</button>
+        </div>
+        <div id="statsInfoBody" class="modal-body"></div>
+    </div>
+</div>
 
 <div id="regionDetailModal" class="modal-backdrop" aria-hidden="true">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="regionDetailTitle">
@@ -2490,6 +2683,39 @@ function showLoginGate() {
     }, 80);
 }
 
+function getTimeGreeting(date = new Date()) {
+    const hour = date.getHours();
+
+    if (hour >= 5 && hour < 12) return "Good morning";
+    if (hour >= 12 && hour < 17) return "Good afternoon";
+    if (hour >= 17 && hour < 24) return "Good evening";
+    return "Good night";
+}
+
+function showPostLoginWelcome() {
+    const overlay = $("#postLoginWelcome");
+    if (!overlay) return;
+
+    const now = new Date();
+    const greeting = getTimeGreeting(now);
+    const time = now.toLocaleTimeString("en-IN", {
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+
+    setText("#postLoginGreeting", greeting);
+    setText("#postLoginName", "Welcome, Hariharan");
+    setText("#postLoginTime", `It's ${time}. Your workspace is ready.`);
+
+    overlay.classList.remove("hidden");
+    overlay.setAttribute("aria-hidden", "false");
+
+    window.setTimeout(function() {
+        overlay.classList.add("hidden");
+        overlay.setAttribute("aria-hidden", "true");
+    }, 1550);
+}
+
 function hideLoginGate() {
     const gate = $("#loginGate");
     document.body.classList.remove("auth-locked");
@@ -2581,6 +2807,7 @@ function bindLoginEvents() {
 
             setTimeout(function () {
                 hideLoginGate();
+                showPostLoginWelcome();
 
                 if (button) {
                     button.disabled = false;
@@ -3858,16 +4085,23 @@ async function rebuildBucketsAsync() {
 function updateDashboard() {
     /*
         Regional classification is unchanged.
-        These cards only calculate summary metrics from the records
-        already produced by the existing workbook-processing algorithm.
+        These four cards calculate summary metrics from the records already
+        produced by the existing workbook-processing algorithm.
+
+        The Info buttons use the Group column as the source-of-truth for
+        PCS/ECS (and any other group names present in the workbook).
+        Nothing in the Excel upload/classification worker is changed here.
     */
     const records = Array.isArray(AppState.records) ? AppState.records : [];
 
-    const groupIndex = getHeaderIndexByAliases(["Group"]);
+    const groupIndex = getHeaderIndexByAliases(["Group", "Group Name"]);
     const entityIndex = getHeaderIndexByAliases([
         "Client Name", "Entity", "Entity Name", "Client"
     ]);
-    const serviceIndex = getHeaderIndexByAliases(["Services", "Service"]);
+    const serviceIndex = getHeaderIndexByAliases([
+        "Client Co ordination", "Client Coordination", "Client Co-ordination",
+        "Client Co Ordination", "Services", "Service"
+    ]);
     const commercialIndex = getHeaderIndexByAliases([
         "Monthly Commercials", "Monthly Commercial",
         "Commercials", "Commercial"
@@ -3902,17 +4136,7 @@ function updateDashboard() {
         }
 
         if (commercialIndex !== -1) {
-            const raw = String(values[commercialIndex] ?? "").trim();
-            if (raw) {
-                const cleaned = raw
-                    .replace(/₹/g, "")
-                    .replace(/Rs\.?/gi, "")
-                    .replace(/,/g, "")
-                    .replace(/[^\d.-]/g, "");
-
-                const amount = Number(cleaned);
-                if (Number.isFinite(amount)) totalCommercial += amount;
-            }
+            totalCommercial += parseCommercialAmount(values[commercialIndex]);
         }
     });
 
@@ -3943,6 +4167,257 @@ function updateDashboard() {
             "warning"
         );
     }
+}
+
+function parseCommercialAmount(value) {
+    if (value === null || value === undefined || value === "") return 0;
+
+    const raw = String(value).trim();
+    if (!raw) return 0;
+
+    const cleaned = raw
+        .replace(/₹/g, "")
+        .replace(/Rs\.?/gi, "")
+        .replace(/,/g, "")
+        .replace(/[^\d.-]/g, "");
+
+    const amount = Number(cleaned);
+    return Number.isFinite(amount) ? amount : 0;
+}
+
+function getGroupBreakdown(records) {
+    const groupIndex = getHeaderIndexByAliases(["Group", "Group Name"]);
+    const entityIndex = getHeaderIndexByAliases([
+        "Client Name", "Entity", "Entity Name", "Client"
+    ]);
+    const serviceIndex = getHeaderIndexByAliases([
+        "Client Co ordination", "Client Coordination", "Client Co-ordination",
+        "Client Co Ordination", "Services", "Service"
+    ]);
+    const commercialIndex = getHeaderIndexByAliases([
+        "Monthly Commercials", "Monthly Commercial",
+        "Commercials", "Commercial"
+    ]);
+
+    const groups = new Map();
+    const getGroupName = function(record) {
+        if (groupIndex === -1) return "Unassigned / No Group";
+        const value = normaliseText(record.values?.[groupIndex]);
+        return value || "Unassigned / No Group";
+    };
+
+    records.forEach(function(record) {
+        const groupName = getGroupName(record);
+
+        if (!groups.has(groupName)) {
+            groups.set(groupName, {
+                records: 0,
+                entities: new Set(),
+                services: new Set(),
+                commercials: 0
+            });
+        }
+
+        const item = groups.get(groupName);
+        item.records += 1;
+
+        if (entityIndex !== -1) {
+            const entity = normaliseText(record.values?.[entityIndex]);
+            if (entity) item.entities.add(entity);
+        }
+
+        if (serviceIndex !== -1) {
+            const raw = normaliseText(record.values?.[serviceIndex]);
+            raw.split(/[,;|/]+/)
+                .map(value => normaliseText(value))
+                .filter(Boolean)
+                .forEach(value => item.services.add(value));
+        }
+
+        if (commercialIndex !== -1) {
+            item.commercials += parseCommercialAmount(record.values?.[commercialIndex]);
+        }
+    });
+
+    return Array.from(groups.entries())
+        .sort(function(a, b) {
+            return b[1].records - a[1].records || a[0].localeCompare(b[0]);
+        });
+}
+
+function openStatsInfo(type) {
+    const records = Array.isArray(AppState.records) ? AppState.records : [];
+    if (!records.length) {
+        showToast("Upload and process a workbook before opening this breakdown.", "error");
+        return;
+    }
+
+    const groups = getGroupBreakdown(records);
+    const totalRecords = records.length;
+
+    // Services are intentionally NOT grouped by region here.
+    // They are counted from the entire uploaded workbook, so ECS/FCS/OPS/etc.
+    // represent their totals across North + South + East + West + Uncategorized.
+    const serviceTotals = new Map();
+    const serviceIndex = getHeaderIndexByAliases([
+        "Client Co ordination", "Client Coordination", "Client Co-ordination",
+        "Client Co Ordination", "Services", "Service"
+    ]);
+    if (serviceIndex !== -1) {
+        records.forEach(function(record) {
+            const raw = normaliseText(record.values?.[serviceIndex]);
+            raw.split(/[,;|/]+/)
+                .map(value => normaliseText(value))
+                .filter(Boolean)
+                .forEach(function(service) {
+                    serviceTotals.set(service, (serviceTotals.get(service) || 0) + 1);
+                });
+        });
+    }
+
+    const config = {
+        group: {
+            title: "Group Breakdown",
+            subtitle: "Total records for each Group (PCS, ECS, FCS, etc.) across all regions."
+        },
+        entity: {
+            title: "Entity Breakdown",
+            subtitle: "Total unique entities/clients belonging to each Group across all regions."
+        },
+        service: {
+            title: "Service Breakdown",
+            subtitle: "Client Coordination categories counted across all regions and groups."
+        },
+        commercial: {
+            title: "Commercial Breakdown",
+            subtitle: "Total Monthly Commercials contributed by each Group across all regions."
+        }
+    };
+
+    const selected = config[type] || config.group;
+    setText("#statsInfoTitle", selected.title);
+    setText("#statsInfoSubtitle", selected.subtitle);
+
+    if (type === "service") {
+        const entries = Array.from(serviceTotals.entries())
+            .sort(function(a, b) {
+                return b[1] - a[1] || a[0].localeCompare(b[0]);
+            });
+
+        if (!entries.length) {
+            $("#statsInfoBody").innerHTML = `
+                <div class="alert info" style="margin-top:0;">
+                    No Client Coordination / service values were found in the workbook.
+                </div>
+            `;
+            openModal("#statsInfoModal");
+            return;
+        }
+
+        const totalServiceEntries = entries.reduce(function(sum, entry) {
+            return sum + entry[1];
+        }, 0);
+
+        $("#statsInfoBody").innerHTML = `
+            <div class="stat-breakdown-grid">
+                <div class="stat-breakdown-card" style="grid-column:1/-1;">
+                    <div class="stat-breakdown-title">
+                        <strong>Client Coordination</strong>
+                        <span>${formatNumber(entries.length)} categories • ${formatNumber(totalServiceEntries)} populated</span>
+                    </div>
+                    <div class="stat-breakdown-list">
+                        ${entries.map(function(entry) {
+                            return `
+                                <div class="stat-breakdown-row">
+                                    <span>${escapeHtml(entry[0])}</span>
+                                    <strong>${formatNumber(entry[1])}</strong>
+                                </div>
+                            `;
+                        }).join("")}
+                    </div>
+                </div>
+            </div>
+            <div class="stat-breakdown-total">
+                <span>Total populated service entries — all regions</span>
+                <strong>${formatNumber(totalServiceEntries)}</strong>
+            </div>
+            <div style="margin-top:12px;color:var(--muted);font-size:10px;line-height:1.5;">
+                Client Coordination counts use the complete uploaded workbook. North, South, East, West and Uncategorized records are all included.
+            </div>
+        `;
+        openModal("#statsInfoModal");
+        return;
+    }
+
+    if (!groups.length) {
+        $("#statsInfoBody").innerHTML = `
+            <div class="alert info" style="margin-top:0;">
+                No Group values were found in the processed records.
+            </div>
+        `;
+        openModal("#statsInfoModal");
+        return;
+    }
+
+    const totalValue = groups.reduce(function(sum, entry) {
+        const item = entry[1];
+        if (type === "group") return sum + item.records;
+        if (type === "entity") return sum + item.entities.size;
+        return sum + item.commercials;
+    }, 0);
+
+    const totalDisplay = type === "commercial"
+        ? "₹" + totalValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })
+        : formatNumber(totalValue);
+
+    const sourceNote = groupIndexExists()
+        ? "Breakdown source: Group column in the uploaded workbook."
+        : "The workbook has no Group column, so all records are shown under Unassigned / No Group.";
+
+    $("#statsInfoBody").innerHTML = `
+        <div class="stat-breakdown-grid">
+            ${groups.map(function(entry) {
+                const item = entry[1];
+                const value = type === "group"
+                    ? item.records
+                    : type === "entity"
+                        ? item.entities.size
+                        : item.commercials;
+
+                const displayValue = type === "commercial"
+                    ? "₹" + value.toLocaleString("en-IN", { maximumFractionDigits: 2 })
+                    : formatNumber(value);
+
+                return `
+                    <div class="stat-breakdown-card">
+                        <div class="stat-breakdown-title">
+                            <strong>${escapeHtml(entry[0])}</strong>
+                            <span>${formatNumber(item.records)} records • All regions</span>
+                        </div>
+                        <div class="stat-breakdown-list">
+                            <div class="stat-breakdown-row">
+                                <span>${type === "group" ? "Total records" : type === "entity" ? "Unique entities" : "Total commercials"}</span>
+                                <strong>${displayValue}</strong>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join("")}
+        </div>
+        <div class="stat-breakdown-total">
+            <span>${type === "group" ? "Total records across all Groups" : type === "entity" ? "Total unique entities across all Groups" : "Total commercials across all Groups"}</span>
+            <strong>${totalDisplay}</strong>
+        </div>
+        <div style="margin-top:12px;color:var(--muted);font-size:10px;line-height:1.5;">
+            ${escapeHtml(sourceNote)}
+        </div>
+    `;
+
+    openModal("#statsInfoModal");
+}
+
+function groupIndexExists() {
+    return getHeaderIndexByAliases(["Group", "Group Name"]) !== -1;
 }
 
 function getHeaderIndexByAliases(aliases) {
@@ -5242,6 +5717,16 @@ async function mergeSelectedFiles() {
    ================================================================ */
 
 function bindModalEvents() {
+    $$(".stat-info-btn").forEach(function(button) {
+        button.addEventListener("click", function() {
+            openStatsInfo(button.dataset.statInfo);
+        });
+    });
+
+    $("#statsInfoClose").addEventListener("click", function() {
+        closeModal("#statsInfoModal");
+    });
+
     $("#detailClose").addEventListener(
         "click",
         function () {
